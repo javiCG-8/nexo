@@ -51,8 +51,8 @@ jobs:
 
       - name: Build Angular Application
         working-directory: frontend
-        run: npx ng build
+        run: npx ng build --configuration production
 
       - name: Run Frontend Tests
         working-directory: frontend
-        run: npm test -- --watch=false
+        run: npx ng test --watch=false
