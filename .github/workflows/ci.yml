@@ -1,58 +1,150 @@
-name: Nexo CI Pipeline
+# Pipeline CI/CD de Nexo: build → test → deploy.
+# - Cada push y Pull Request ejecuta análisis, compilación y pruebas.
+# - Solo un push a main que pasa TODAS las etapas despliega la demo en GitHub Pages.
+name: CI/CD
 
 on:
   push:
-    branches: [ main, develop, "feat/*" ]
+    branches: [main]
   pull_request:
-    branches: [ main, develop ]
+  workflow_dispatch:
+
+# Un nuevo push cancela la ejecución anterior de la misma rama.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Mínimo privilegio por defecto; cada job pide solo lo que necesita.
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: 24
 
 jobs:
   backend:
-    name: Backend Build & Test
+    name: Backend · tipos, pruebas y auditoría
     runs-on: ubuntu-latest
-
+    defaults:
+      run:
+        working-directory: backend
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 24
-          cache: 'npm'
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
           cache-dependency-path: backend/package-lock.json
 
-      - name: Install backend dependencies
-        working-directory: backend
+      - name: Instalar dependencias
         run: npm ci
 
-      - name: Run backend Jest unit & contract tests
+      - name: Verificar tipos y compilar
+        run: npm run build
+
+      - name: Pruebas unitarias y de contrato (cobertura mínima 80 %)
+        run: npm run test:coverage
+
+      - name: Auditoría de dependencias de producción
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Publicar reporte de cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage/lcov-report
+          retention-days: 7
+
+  integration:
+    name: Backend · integración con PostgreSQL 18
+    runs-on: ubuntu-latest
+    needs: backend
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: nexobd_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Credenciales efímeras del contenedor de CI, no son secretos reales.
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/nexobd_test
+    defaults:
+      run:
         working-directory: backend
-        run: npm test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Pruebas de integración (esquema, migraciones, seed y flujo completo)
+        run: npm run test:integration
 
   frontend:
-    name: Frontend Build & Test
+    name: Frontend · build y pruebas
     runs-on: ubuntu-latest
-
+    defaults:
+      run:
+        working-directory: frontend
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 24
-          cache: 'npm'
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Install frontend dependencies
-        working-directory: frontend
+      - name: Instalar dependencias
         run: npm ci
 
-      - name: Build Angular Application
-        working-directory: frontend
-        run: npx ng build --configuration production
-
-      - name: Run Frontend Tests
-        working-directory: frontend
+      - name: Pruebas unitarias (Vitest)
         run: npx ng test --watch=false
+
+      - name: Auditoría de dependencias de producción
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Build de producción para GitHub Pages
+        # El sitio se publica en https://<usuario>.github.io/<repositorio>/
+        run: npx ng build --configuration production --base-href "/${{ github.event.repository.name }}/"
+
+      - name: Fallback de rutas SPA
+        # GitHub Pages responde 404.html para rutas desconocidas; así Angular resuelve /reports, /login, etc.
+        run: cp dist/frontend/browser/index.html dist/frontend/browser/404.html
+
+      - name: Empaquetar sitio
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist/frontend/browser
+
+  deploy:
+    name: Deploy · demo en GitHub Pages
+    runs-on: ubuntu-latest
+    needs: [backend, integration, frontend]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publicar en GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
