@@ -5,12 +5,13 @@ export type Role = 'USER' | 'TECHNICIAN';
 export type Status = (typeof STATUSES)[number];
 export type Priority = (typeof PRIORITIES)[number];
 
+/** Identidad mínima del usuario autenticado, derivada del token. */
 export interface AuthUser {
   id: string;
   organizationId: string;
   role: Role;
-  name: string;
-  email: string;
+  name?: string;
+  email?: string;
 }
 
 export interface AuthRequest extends Request {

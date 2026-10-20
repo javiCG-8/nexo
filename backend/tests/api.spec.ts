@@ -1,39 +1,18 @@
-process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/nexobd';
-process.env.AUTH_SECRET = 'test-secret';
-process.env.FRONTEND_ORIGIN = 'http://localhost:4200';
-process.env.PORT = '3000';
-
 jest.mock('../src/db/pool', () => ({
   query: jest.fn(),
   inTransaction: jest.fn(),
-  pool: { end: jest.fn() }
+  pool: { end: jest.fn() },
+  checkDatabase: jest.fn()
 }));
 
 import request from 'supertest';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import app from '../src/app';
 import { query } from '../src/db/pool';
+import { CATEGORY_ID, ORG, REPORT_ID, TECH_ID, USER_ID, rows, technicianToken, userToken } from './fixtures';
 
 const mockedQuery = query as jest.MockedFunction<typeof query>;
 
-const ORG = '019a0000-0000-7000-8000-000000000001';
-const USER_ID = '019a0000-0000-7000-8000-000000000010';
-const TECH_ID = '019a0000-0000-7000-8000-000000000020';
-const REPORT_ID = '019a0000-0000-7000-8000-000000000100';
-const CATEGORY_ID = '019a0000-0000-7000-8000-000000001000';
-
-const userToken = () => jwt.sign(
-  { id: USER_ID, organizationId: ORG, role: 'USER', name: 'Usuario', email: 'user@example.test' },
-  'test-secret'
-);
-const technicianToken = () => jwt.sign(
-  { id: TECH_ID, organizationId: ORG, role: 'TECHNICIAN', name: 'Técnico', email: 'tech@example.test' },
-  'test-secret'
-);
-
-/** Simula una respuesta de `pg` con las filas indicadas. */
-const rows = (...items: object[]) => ({ rows: items, rowCount: items.length } as never);
 const report = (overrides: object = {}) => ({
   id: REPORT_ID, organizationId: ORG, categoryId: CATEGORY_ID, status: 'OPEN', technicianId: null, ...overrides
 });
@@ -41,19 +20,62 @@ const report = (overrides: object = {}) => ({
 beforeEach(() => mockedQuery.mockReset());
 
 describe('Autenticación', () => {
-  test('permite iniciar sesión con credenciales válidas', async () => {
+  test('permite iniciar sesión y entrega la sesión en una cookie HttpOnly', async () => {
     mockedQuery.mockResolvedValueOnce(rows({
-      id: USER_ID, organizationId: ORG, name: 'Usuario', email: 'user@example.test',
+      id: USER_ID, organizationId: ORG, organizationSlug: 'utmach', name: 'Usuario', email: 'user@example.test',
       role: 'USER', password_hash: await bcrypt.hash('Nexo123!', 4)
     }));
 
     const response = await request(app).post('/api/v1/auth/login').send({
-      organizationSlug: 'utmach', email: 'user@example.test', password: 'Nexo123!'
+      organizationSlug: 'UTMACH', email: 'user@example.test', password: 'Nexo123!'
     });
 
     expect(response.status).toBe(200);
-    expect(response.body.user.role).toBe('USER');
-    expect(response.body.token).toBeDefined();
+    expect(response.body.user).toEqual(expect.objectContaining({ role: 'USER', organizationSlug: 'utmach' }));
+    expect(response.body.token).toBeUndefined();
+    expect(response.body.user.password_hash).toBeUndefined();
+    expect(mockedQuery.mock.calls[0][1]).toEqual(['utmach', 'user@example.test']);
+    const cookie = String(response.headers['set-cookie']);
+    expect(cookie).toMatch(/^nexo_session=/);
+    expect(cookie).toMatch(/HttpOnly/);
+    expect(cookie).toMatch(/SameSite=Strict/);
+    expect(cookie).toMatch(/Path=\/api/);
+  });
+
+  test('responde lo mismo si el usuario no existe o la contraseña es incorrecta', async () => {
+    mockedQuery.mockResolvedValueOnce(rows());
+    const unknownUser = await request(app).post('/api/v1/auth/login').send({
+      organizationSlug: 'utmach', email: 'nadie@example.test', password: 'x'
+    });
+
+    mockedQuery.mockResolvedValueOnce(rows({
+      id: USER_ID, organizationId: ORG, role: 'USER', password_hash: await bcrypt.hash('otra', 4)
+    }));
+    const wrongPassword = await request(app).post('/api/v1/auth/login').send({
+      organizationSlug: 'utmach', email: 'user@example.test', password: 'x'
+    });
+
+    expect(unknownUser.status).toBe(401);
+    expect(wrongPassword.status).toBe(401);
+    expect(unknownUser.body).toEqual(wrongPassword.body);
+  });
+
+  test('autentica con la cookie de sesión y devuelve el perfil', async () => {
+    mockedQuery.mockResolvedValueOnce(rows({ id: USER_ID, organizationId: ORG, role: 'USER', name: 'Usuario' }));
+
+    const response = await request(app)
+      .get('/api/v1/auth/me')
+      .set('Cookie', `nexo_session=${userToken()}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.user.id).toBe(USER_ID);
+    expect(mockedQuery.mock.calls[0][1]).toEqual([USER_ID, ORG]);
+  });
+
+  test('cierra sesión borrando la cookie', async () => {
+    const response = await request(app).post('/api/v1/auth/logout');
+    expect(response.status).toBe(204);
+    expect(String(response.headers['set-cookie'])).toMatch(/nexo_session=;/);
   });
 
   test('rechaza peticiones sin token', async () => {
