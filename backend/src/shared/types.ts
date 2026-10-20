@@ -1,8 +1,9 @@
 import { Request } from 'express';
+import { PRIORITIES, STATUSES } from '../reports/report.schemas';
 
 export type Role = 'USER' | 'TECHNICIAN';
-export type Status = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED';
-export type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+export type Status = (typeof STATUSES)[number];
+export type Priority = (typeof PRIORITIES)[number];
 
 export interface AuthUser {
   id: string;

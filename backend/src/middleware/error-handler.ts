@@ -12,6 +12,10 @@ export function errorHandler(
     : new ApiError(500, 'INTERNAL_ERROR', 'Error interno del servidor');
 
   res.status(apiError.status).json({
-    error: { code: apiError.code, message: apiError.message }
+    error: {
+      code: apiError.code,
+      message: apiError.message,
+      ...(apiError.details ? { details: apiError.details } : {})
+    }
   });
 }
