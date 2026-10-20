@@ -1,4 +1,26 @@
+# Dependencias
 node_modules/
+
+# Secretos y configuración local: NUNCA versionar
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Compilados y artefactos
 dist/
 coverage/
+.angular/
+*.tsbuildinfo
+
+# Registros y archivos del sistema
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# Editores
+.idea/
+.vscode/*
+!.vscode/extensions.json
