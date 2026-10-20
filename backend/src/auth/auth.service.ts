@@ -1,30 +1,28 @@
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { env } from '../config/env';
 import { ApiError } from '../shared/errors';
-import { AuthUser } from '../shared/types';
-import { findUserForLogin } from './auth.repository';
+import { findUserById, findUserForLogin } from './auth.repository';
+import { LoginInput } from './auth.schemas';
+import { signSession } from './token';
 
-export async function login(
-  organizationSlug: string,
-  email: string,
-  password: string
-) {
+/**
+ * Hash bcrypt de una contraseña aleatoria descartada. Se compara contra él cuando
+ * el usuario no existe para que el tiempo de respuesta no revele qué correos están registrados.
+ */
+const DUMMY_HASH = '$2b$10$tbK4K2gEcOJmho.yVE/Cdeh8f7XXotD9YUoU8ZQmizkHNRrXqTZl6';
+
+const invalidCredentials = () => new ApiError(401, 'AUTHENTICATION_FAILED', 'Credenciales inválidas');
+
+export async function login({ organizationSlug, email, password }: LoginInput) {
   const candidate = await findUserForLogin(organizationSlug, email);
-  if (!candidate || !(await bcrypt.compare(password, candidate.password_hash))) {
-    throw new ApiError(401, 'AUTHENTICATION_FAILED', 'Credenciales inválidas');
-  }
+  const passwordMatches = await bcrypt.compare(password, candidate?.password_hash ?? DUMMY_HASH);
+  if (!candidate || !passwordMatches) throw invalidCredentials();
 
-  const authUser: AuthUser = {
-    id: candidate.id,
-    organizationId: candidate.organizationId,
-    name: candidate.name,
-    email: candidate.email,
-    role: candidate.role
-  };
+  const { password_hash: _hash, ...user } = candidate;
+  return { token: signSession(user), user };
+}
 
-  return {
-    token: jwt.sign(authUser, env.authSecret, { expiresIn: '8h' }),
-    user: authUser
-  };
+export async function currentProfile(id: string, organizationId: string) {
+  const user = await findUserById(id, organizationId);
+  if (!user) throw new ApiError(401, 'SESSION_EXPIRED', 'La sesión ya no es válida');
+  return user;
 }
