@@ -15,22 +15,24 @@ JSON errors use:
 
 ## Authentication
 
+> Actualizado por la [spec 003](../../003-seguridad/spec.md): la sesión viaja en una cookie `HttpOnly`; el token ya no se devuelve en el cuerpo.
+
 ### `POST /auth/login`
 
-Request:
+Request (campos desconocidos se rechazan con `400`):
 
 ```json
 { "organizationSlug": "utmach", "email": "user@example.com", "password": "secret" }
 ```
 
-`200 OK`:
+`200 OK` + cabecera `Set-Cookie: nexo_session=<jwt>; HttpOnly; SameSite=Strict; Path=/api` (`Secure` en producción):
 
 ```json
 {
-  "token": "opaque-or-signed-token",
   "user": {
     "id": "uuid",
     "organizationId": "uuid",
+    "organizationSlug": "utmach",
     "name": "Ana",
     "email": "user@example.com",
     "role": "USER"
@@ -38,7 +40,19 @@ Request:
 }
 ```
 
-Invalid credentials or organization return `401 AUTHENTICATION_FAILED`.
+Invalid credentials or organization return `401 AUTHENTICATION_FAILED` (misma respuesta y tiempo similar exista o no el usuario). Tras 10 intentos fallidos por IP en 15 minutos: `429 TOO_MANY_REQUESTS`.
+
+### `GET /auth/me`
+
+Devuelve `{ "user": { ... } }` si la cookie es válida; `401` en caso contrario. El frontend lo usa para restaurar la sesión al recargar.
+
+### `POST /auth/logout`
+
+Borra la cookie. `204 No Content`.
+
+### Token
+
+JWT `HS256` con `sub` (usuario), `org` (organización), `role`, `iss = nexo-api`, `aud = nexo-web` y expiración de 8 h. Los clientes de API (Postman, pruebas) pueden enviarlo también como `Authorization: Bearer <jwt>`.
 
 ## Categories
 
@@ -124,6 +138,37 @@ Request:
 
 Only `OPEN`, `IN_PROGRESS` and `RESOLVED` are accepted, with transitions defined in [data-model.md](../data-model.md). Invalid transitions return `409 INVALID_STATUS_TRANSITION`.
 
+Al pasar a `RESOLVED` es obligatorio `resolutionNotes` (5 a 2000 caracteres); si falta: `400 VALIDATION_ERROR` ([spec 002](../../002-ciclo-vida-reportes/spec.md), FR-004).
+
+```json
+{ "status": "RESOLVED", "resolutionNotes": "Se reemplazó el conector RJ-45." }
+```
+
+### `PUT /reports/:id` · `DELETE /reports/:id`
+
+Role: `USER` autor del reporte. Solo mientras el reporte esté `OPEN`, sin técnico y tenga menos de 5 minutos ([spec 002](../../002-ciclo-vida-reportes/spec.md)). `PUT` acepta cualquier subconjunto de `title`, `description`, `categoryId`, `priority`.
+
+| Situación | Respuesta |
+|---|---|
+| Editable | `200` reporte actualizado · `200 { "id": "uuid" }` al cancelar |
+| Ya asignado o no `OPEN` | `409 REPORT_LOCKED` |
+| Pasaron más de 5 minutos | `409 EDIT_WINDOW_EXPIRED` |
+| De otro usuario u organización | `404 REPORT_NOT_FOUND` |
+
+## Errores transversales
+
+| Código HTTP | `error.code` | Cuándo |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Cuerpo, parámetro o filtro inválido. Incluye `details: [{ field, message }]` |
+| 400 | `INVALID_JSON` | JSON malformado |
+| 401 | `AUTHENTICATION_REQUIRED` / `INVALID_TOKEN` | Sin sesión o token inválido/expirado |
+| 403 | `FORBIDDEN` | Rol sin permiso |
+| 404 | `NOT_FOUND` | Ruta inexistente |
+| 413 | `PAYLOAD_TOO_LARGE` | Cuerpo mayor a 10 kB |
+| 415 | `UNSUPPORTED_MEDIA_TYPE` | Cuerpo que no es `application/json` (protección CSRF) |
+| 429 | `TOO_MANY_REQUESTS` | Demasiados intentos de login |
+| 500 | `INTERNAL_ERROR` | Error inesperado (sin detalles internos) |
+
 ## Health and configuration
 
 ### `GET /health`
@@ -133,5 +178,7 @@ Unauthenticated endpoint returning `200 OK`:
 ```json
 { "status": "ok" }
 ```
+
+`GET /health/ready` verifica además la conexión con PostgreSQL: `200 { "status": "ok", "database": true }` o `503`.
 
 Runtime configuration is supplied through environment variables, not committed source: database connection, authentication secret, API port, allowed frontend origin, and runtime environment. Missing required values must prevent startup with an explicit error.

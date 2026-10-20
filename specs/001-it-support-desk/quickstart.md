@@ -13,8 +13,8 @@ Create `backend/.env` locally from `backend/.env.example`:
 ```text
 NODE_ENV=development
 PORT=3000
-DATABASE_URL=postgresql://user:password@localhost:5432/nexo
-AUTH_SECRET=replace-with-local-secret
+DATABASE_URL=postgresql://user:password@localhost:5432/nexobd
+AUTH_SECRET=reemplazar-por-un-secreto-aleatorio-de-32-caracteres-o-mas
 FRONTEND_ORIGIN=http://localhost:4200
 ```
 
@@ -25,8 +25,8 @@ Do not commit `.env` or real secrets. The API must fail clearly at startup when 
 ```powershell
 cd backend
 npm ci
-npm run migrate
-npm run seed
+psql -d nexobd -f db/schema.sql
+psql -d nexobd -f db/seed.sql
 
 cd ..\frontend
 npm ci

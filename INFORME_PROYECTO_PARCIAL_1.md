@@ -18,7 +18,7 @@ En la industria actual del software en Ecuador, un porcentaje considerable de em
 5. **Obsolescencia metodológica y falta de automatización**: Procesos de compilación y despliegue manuales, propensos al error humano.
 
 ### 1.2 Reto Tecnológico Propuesto
-Diseñar e implementar un modelo moderno de desarrollo de software para la organización/empresa **Nexo**, integrando **Spec Driven Development (SDD)**, **GitHub Spec Kit**, **Git Flow / Trunk-Based Development**, **GitHub Actions (CI/CD)** y **GitHub Copilot / Inteligencia Artificial Generativa**.
+Diseñar e implementar un modelo moderno de desarrollo de software para la organización/empresa **Nexo**, integrando **Spec Driven Development (SDD)**, **GitHub Spec Kit**, **GitHub Flow** (comparado con Git Flow y Trunk-Based Development), **GitHub Actions (CI/CD)** y **GitHub Copilot / Inteligencia Artificial Generativa**.
 
 ---
 
@@ -28,11 +28,12 @@ Diseñar e implementar un modelo moderno de desarrollo de software para la organ
 * **Git Avanzado**: Utilización del grafo de commits inmutable, comandos de reescritura segura (`git rebase`), resolución limpia de conflictos y firmado de commits.
 * **Flujo de Trabajo (Git Flow vs. Trunk-Based Development)**:
   * *Git Flow*: Ideal para lanzamientos estructurados por versiones, utilizando ramas `main`, `develop`, `feature/*`, `release/*` y `hotfix/*`.
-  * *Trunk-Based Development*: Estrategia adoptada en Nexo para integración continua ágil, donde ramas de vida corta (`feat/frontend-reportes`, `feat/backend-api`) se integran frecuentemente a la rama principal mediante Pull Requests validados por automatizaciones.
+  * *Trunk-Based Development*: todos integran en `main` varias veces al día, normalmente con *feature flags*; exige una suite de pruebas muy madura.
+  * *GitHub Flow* (**adoptado en Nexo**): `main` siempre desplegable y cada cambio en una rama corta (`feat/reportes-ciclo-vida`, `feat/seguridad-api`, `ci/pipeline-cicd`) que vuelve a `main` mediante un Pull Request validado por el pipeline. Es la variante práctica de Trunk-Based para un equipo pequeño y evita mantener una rama `develop`. Ver `docs/FLUJO_DE_TRABAJO.md`.
 
 ### 🔹 BLOQUE 2: Trabajo Colaborativo en GitHub
 * **Pull Requests (PR)**: Mecanismo central para la integración de código donde cada nueva característica es aislada y sometida a revisión.
-* **Code Review y Branch Protection Rules**: Reglas aplicadas en la rama principal `main` para exigir revisiones aprobadas y la ejecución exitosa de pruebas automatizadas antes de permitir la fusión (*merge*).
+* **Code Review y Branch Protection Rules**: cada PR usa una plantilla con checklist (especificación, pruebas, multi-tenant, validación, secretos y accesibilidad) y `CODEOWNERS` solicita al revisor automáticamente. Se documenta la regla de protección de `main` que exige aprobación y los checks del pipeline en verde antes del *merge*.
 
 ### 🔹 BLOQUE 3: Desarrollo Basado en Especificaciones (Spec Driven Development - SDD)
 * **Filosofía SDD**: Paradigma donde las especificaciones técnicas (`spec.md`), planes de implementación (`plan.md`), modelos de datos (`data-model.md`) y listas de tareas (`tasks.md`) se convierten en artefactos vivos de código que guían tanto a desarrolladores como a herramientas de IA.
@@ -40,19 +41,20 @@ Diseñar e implementar un modelo moderno de desarrollo de software para la organ
 
 ### 🔹 BLOQUE 4: DevOps e Integración Continua (CI/CD)
 * **CI/CD con GitHub Actions**: Implementación del flujo de automatización en `.github/workflows/ci.yml`.
-* **Pipeline de Construcción y Pruebas**: Al detectar un evento de `push` o `pull_request`, el pipeline ejecuta automáticamente:
-  1. Descarga del código (*Checkout*).
-  2. Configuración del entorno Node.js 20 con caché optimizado de dependencias.
-  3. Instalación de paquetes y ejecución de suite de pruebas unitarias/contrato en Express (backend).
-  4. Compilación del proyecto Angular y ejecución de suite de pruebas unitarias/interfaz (frontend).
+* **Pipeline build → test → deploy**: en cada Pull Request y en cada push a `main` se ejecutan, con Node.js 24:
+  1. **Backend**: instalación reproducible (`npm ci`), compilación TypeScript, 38 pruebas unitarias y de contrato con cobertura mínima del 80 % (actual ≈ 89 % de líneas) y `npm audit`.
+  2. **Integración**: un contenedor **PostgreSQL 18** recibe el esquema, la migración y el seed; 10 pruebas recorren el flujo completo contra la base real (aislamiento entre organizaciones, asignación concurrente, ventana de 5 minutos).
+  3. **Frontend**: 20 pruebas con Vitest, `npm audit` y build de producción.
+  4. **Deploy**: solo si todo pasó y el cambio está en `main`, se publica la demo en **GitHub Pages**.
+* **Seguridad automatizada**: CodeQL (análisis estático) en cada PR y semanalmente; Dependabot abre PRs de actualización de dependencias.
 
 ### 🔹 BLOQUE 5: Inteligencia Artificial Aplicada al Desarrollo
-* **GitHub Copilot y Asistentes de IA (Antigravity/Gemini 3.6)**: Integración de la IA en todo el SDLC para la generación asistida de especificaciones SDD, refactorización de componentes Angular, creación de controladores Express y aceleración del diseño de pruebas automatizadas.
+* **GitHub Copilot y Asistentes de IA (Antigravity/Gemini 3.6, Claude Code)**: Integración de la IA en todo el SDLC para la generación asistida de especificaciones SDD, refactorización de componentes Angular, creación de controladores Express y aceleración del diseño de pruebas automatizadas.
 * **Prompt Engineering para Programadores**: Uso de técnicas de especificación con contexto de sistema, restricciones explícitas, análisis de límites (*Edge Cases*) y arquitectura multi-inquilino.
 
 ### 🔹 BLOQUE 6: Calidad de Software y TDD
 * **Test Driven Development (TDD)**: Definición previa de casos de prueba fallidos (rojo), desarrollo del código mínimo necesario (verde) y refactorización continua (azul).
-* **Pruebas en Pipeline**: Integración obligatoria de Jest/Supertest en el Backend y Vitest/Jasmine en el Frontend para prevenir regresiones en producción.
+* **Pruebas en Pipeline**: Integración obligatoria de Jest/Supertest en el backend (unitarias, contrato e integración con PostgreSQL) y Vitest en el frontend; el pipeline bloquea el *merge* si alguna falla.
 
 ### 🔹 BLOQUE 7: Gestión de Proyectos Ágiles
 * **GitHub Issues & Projects (Kanban)**: Clasificación de tareas mediante etiquetas (`P1`, `MVP`, `frontend`, `backend`), hitos (*Milestones*) e integración del tablero Kanban reflejado dinámicamente en la interfaz de técnicos de Nexo.
@@ -61,17 +63,21 @@ Diseñar e implementar un modelo moderno de desarrollo de software para la organ
 
 ## 3. APLICACIÓN PRÁCTICA Y SISTEMA "NEXO"
 
-El sistema **Nexo** ha sido construido bajo los lineamientos prácticos exigidos:
-1. **Repositorio oficial**: `javiCG-8/nexo` en GitHub.
-2. **Frontend en Angular 20+**:
-   - Arquitectura basada en Componentes Standalone, Signals reactivos y servicios inyectables.
-   - Interfaz moderna con dashboard interactivo, badges de estado dinámicos, formulario con validaciones reactivas y vista alternable entre Tabla de Datos y Tablero Kanban.
-   - Acceso demo rápido para simulación inmediata de roles (**Usuario** y **Técnico**).
-3. **Backend en Node.js + Express + TypeScript**:
-   - Base de datos relacional PostgreSQL con aislamiento por `organization_id` (multi-tenant).
-   - Autenticación JWT y hashing de contraseñas con `bcryptjs`.
-   - Cobertura de tests del 100% en los flujos principales del MVP.
-4. **Pipeline CI/CD en GitHub Actions**: Registrado en `.github/workflows/ci.yml`.
+El sistema **Nexo** se construyó siguiendo los lineamientos prácticos exigidos:
+
+1. **Repositorio**: `javiCG-8/nexo` en GitHub, con 10 Pull Requests fusionados en `main` al cierre de la fase de seguridad y ramas adicionales para rediseño, CI/CD y documentación.
+2. **Especificaciones (SDD)**: constitución del proyecto y tres especificaciones en `specs/` (001 MVP, 002 ciclo de vida del reporte, 003 seguridad), cada una con `spec.md`, `plan.md` y `tasks.md`.
+3. **Frontend en Angular 22**: componentes *standalone*, *signals* y detección de cambios *zoneless*; diseño móvil primero con barra de pestañas y hojas inferiores, tema claro/oscuro, accesibilidad WCAG 2.1 AA (foco visible, diálogos nativos, prioridad no dependiente solo del color) e instalable como PWA.
+4. **Backend en Node.js + Express 5 + TypeScript** sobre **PostgreSQL 18**, con aislamiento por `organization_id` en el código y en claves foráneas compuestas.
+5. **Pipeline CI/CD** en `.github/workflows/ci.yml` (build → test → deploy) y demo pública en GitHub Pages.
+
+### 3.1 Seguridad aplicada
+
+Una auditoría basada en OWASP Top 10 (2021) y OWASP API Security Top 10 (2023) identificó 12 hallazgos (spec 003). Se corrigieron, entre otros: el token guardado en `localStorage` (ahora cookie `HttpOnly` y `SameSite=Strict`), la verificación JWT sin algoritmo/emisor/audiencia fijados, el login sin límite de intentos, la enumeración de usuarios por tiempo de respuesta, un filtro XSS basado en expresiones regulares (reemplazado por validación estricta con esquemas), DDL ejecutado desde el código y un bucle infinito de redirecciones en el frontend.
+
+### 3.2 Diseño de experiencia (UX/UI)
+
+Se definió un sistema de diseño propio (tokens de color con contraste AA, tipografía Geist, componentes reutilizables). Las decisiones responden a los usuarios reales: el usuario ve una cuenta regresiva del tiempo que le queda para editar su reporte; el técnico ve indicadores que filtran su bandeja ("sin asignar", "míos") y puede alternar entre lista y tablero Kanban; al resolver, la interfaz exige describir la solución, que luego ve el usuario.
 
 ---
 
@@ -113,3 +119,7 @@ Para resolver los 5 problemas de la empresa evaluada, se propone la siguiente im
 * GitHub. (2024). *GitHub Actions Documentation: Building and testing Node.js*. GitHub Docs. https://docs.github.com/en/actions
 * Humble, J., & Farley, D. (2010). *Continuous Delivery: Reliable Software Releases through Build, Test, and Deployment Automation*. Addison-Wesley Professional.
 * Spec Driven Development Community. (2024). *Spec Driven Development: Modern SDLC methodology*. https://specdriven.ai/
+* GitHub. (2024). *GitHub flow*. GitHub Docs. https://docs.github.com/en/get-started/using-github/github-flow
+* OWASP Foundation. (2021). *OWASP Top 10:2021*. https://owasp.org/Top10/
+* OWASP Foundation. (2023). *OWASP API Security Top 10 2023*. https://owasp.org/API-Security/
+* W3C. (2018). *Web Content Accessibility Guidelines (WCAG) 2.1*. https://www.w3.org/TR/WCAG21/

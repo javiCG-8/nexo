@@ -20,30 +20,37 @@
   * **Inteligencia Artificial**: Asistencia en la generación de código y especificaciones mediante Prompt Engineering.
 
 ### 📌 Diapositiva 3: Arquitectura del Sistema Nexo
-* **Frontend**: Angular 20 (Componentes Standalone, Signals reactivos, Kanban visual, Badges de estado).
+* **Frontend**: Angular 22 (standalone, signals, zoneless), móvil primero, tema claro/oscuro, PWA.
 * **Backend**: Express + TypeScript + PostgreSQL (Multi-organizacional con aislamiento seguro por `organization_id`).
-* **Calidad**: Suites de pruebas integradas en el pipeline CI/CD (Jest/Supertest y Vitest).
+* **Calidad**: 68 pruebas en el pipeline (Jest/Supertest, integración con PostgreSQL 18 y Vitest) + CodeQL.
+* **Seguridad**: cookie HttpOnly, JWT endurecido, límite de intentos, Helmet/CSP (spec 003).
 
 ---
 
 ## 💻 DEMOSTRACIÓN PRÁCTICA EN VIVO (PASO A PASO)
 
-### 1. Iniciar el Sistema (Demostración Local)
-* En la pantalla de Login, mostrar la marca **Nexo** y usar los botones de **Acceso Rápido**:
-  - **Click en "Modo Usuario"**: Muestra el ingreso de `user@example.test` en la organización `utmach`.
-  - **Demostración de Usuario**: Crear un nuevo reporte (ej. *"Falla de red en laboratorio 2"*), asignando prioridad `HIGH` y categoría `NETWORK`. Mostrar cómo el reporte pasa a estado `OPEN`.
+> Antes de presentar, dejar la base limpia: `psql -d nexobd -f backend/db/reset.sql`.
+> Plan B sin servidor: la demo pública en https://javicg-8.github.io/nexo/ (datos simulados).
 
-### 2. Cambio a Rol Técnico
-* Cerrar sesión e ingresar con el botón **"Modo Técnico"** (`tech@example.test`).
-* **Demostrar la vista de Gestión**:
-  - Alternar entre la vista de **Tabla** y el **Tablero Kanban**.
-  - Asignarse el reporte recién creado usando el botón **"Asignarme"**.
-  - Avanzar el estado de `OPEN` a `IN_PROGRESS` y finalmente a `RESOLVED`.
+### 1. Usuario (mostrar en vista móvil: DevTools → modo dispositivo)
+* En el login, pulsar la cuenta **Carlos · Usuario**.
+* Pestaña **Nuevo** → crear *Falla de red en laboratorio 2*, impacto **Alta**, categoría **Redes**.
+* Abrir el reporte: mostrar el progreso del estado y la **cuenta regresiva de 5 minutos** para editar o cancelar.
+* Editar la prioridad para demostrar la ventana de edición (spec 002).
 
-### 3. Evidencia del Pipeline CI/CD en GitHub
-* Abrir el repositorio `javiCG-8/nexo` en GitHub.
-* Ir a la pestaña **Actions** para mostrar la ejecución exitosa del workflow **Nexo CI Pipeline** (`.github/workflows/ci.yml`).
-* Mostrar la lista de **Pull Requests (#1 a #6)** fusionados correctamente en `main`.
+### 2. Técnico (vista de escritorio)
+* Cerrar sesión e ingresar como **Roberto · Técnico**.
+* Pulsar el indicador **Sin asignar** y luego **Asignarme** en el reporte nuevo.
+* Volver a la cuenta de usuario y mostrar que ya **no puede editarlo** (bloqueado al asignarse).
+* Como técnico, cambiar a **Tablero**, pulsar **Iniciar atención** y luego **Resolver**: la interfaz exige escribir la solución.
+* Como usuario, abrir el reporte resuelto y mostrar la **solución aplicada**.
+* Cambiar el tema (claro/oscuro) desde la barra lateral.
+
+### 3. Evidencia del proceso en GitHub
+* **Pull requests**: lista de PRs fusionados (#1–#4 especificación antes del código; #9 y #10 ciclo de vida y seguridad).
+* **Actions**: ejecución del workflow **CI/CD** con sus 4 etapas (backend, integración con PostgreSQL, frontend, deploy).
+* **Security → Code scanning**: resultados de CodeQL.
+* **specs/**: mostrar `specs/002-ciclo-vida-reportes/spec.md` y la prueba que verifica cada requisito (`backend/tests/api.spec.ts`).
 
 ---
 
