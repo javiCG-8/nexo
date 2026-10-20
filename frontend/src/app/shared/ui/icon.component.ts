@@ -41,7 +41,9 @@ export type IconName = keyof typeof ICONS;
 @Component({
   selector: 'app-icon',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { 'aria-hidden': 'true', style: 'display:inline-flex;flex:none' },
+  host: { 'aria-hidden': 'true' },
+  // En hoja de estilos (no en línea) para que las clases del padre puedan ocultar el ícono.
+  styles: ':host { display: inline-flex; flex: none; }',
   template: `
     <svg
       xmlns="http://www.w3.org/2000/svg"
