@@ -1,59 +1,41 @@
-# Frontend
+# Nexo · Frontend
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.2.2.
+Aplicación Angular 22 (componentes *standalone*, *signals*, detección de cambios *zoneless*).
 
-## Development server
+## Comandos
 
-To start a local development server, run:
+| Comando | Uso |
+|---|---|
+| `npm start` | Servidor de desarrollo en http://localhost:4200 (requiere la API en el puerto 3000) |
+| `npx ng test --watch=false` | Pruebas unitarias con Vitest |
+| `npx ng build` | Build de producción en modo demo (API simulada), como se publica en GitHub Pages |
 
-```bash
-ng serve
+## Estructura
+
+```
+src/app/
+├── core/        sesión (cookie HttpOnly), guards por rol, interceptor, reglas compartidas, API demo
+├── features/
+│   ├── auth/    página de login
+│   └── reports/ data (servicio HTTP + store) → ui (componentes) → pages (usuario, técnico)
+├── layout/      shell: barra lateral (escritorio), barra superior y pestañas (móvil)
+└── shared/ui/   sistema de diseño: hojas sobre <dialog>, toasts, badges, íconos, marca
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## Sistema de diseño
 
-## Code scaffolding
+Los tokens viven en `src/styles.css` (`--bg`, `--surface`, `--text`, `--accent`, estados, radios, sombras). El tema oscuro se aplica automáticamente según el sistema o con el selector de la barra lateral (`data-theme` en `<html>`). Reglas:
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+- Móvil primero; puntos de corte en 768 px y 1024 px.
+- Objetivos táctiles de al menos 44 px y `font-size: 16px` en campos móviles (evita el zoom de iOS).
+- Estados que no dependen solo del color: la prioridad se muestra como barras de señal más texto.
+- Diálogos con `<dialog>` nativo para obtener foco atrapado, Esc y fondo inerte.
 
-```bash
-ng generate component component-name
-```
+## Entornos
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+| Archivo | `apiUrl` | `demoMode` |
+|---|---|---|
+| `environment.ts` (desarrollo) | `http://localhost:3000/api/v1` | `false` |
+| `environment.prod.ts` (GitHub Pages) | `/api/v1` | `true`: datos simulados en el navegador |
 
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+Cada entorno tiene su propia Content-Security-Policy (`index.html` e `index.prod.html`).
