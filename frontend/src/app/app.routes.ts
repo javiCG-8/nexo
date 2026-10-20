@@ -1,19 +1,33 @@
 import { Routes } from '@angular/router';
-import { authGuard } from './core/guards/auth.guard';
-import { roleGuard } from './core/guards/role.guard';
+import { authGuard, guestGuard, homeRedirect, roleGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
-  { path: 'login', loadComponent: () => import('./features/auth/pages/login.component').then(m => m.LoginComponent) },
   {
-    path: 'reports',
-    canActivate: [authGuard, roleGuard('USER')],
-    loadComponent: () => import('./features/reports/pages/user-reports.component').then(m => m.UserReportsComponent)
+    path: 'login',
+    title: 'Iniciar sesión · Nexo',
+    canActivate: [guestGuard],
+    loadComponent: () => import('./features/auth/pages/login.page').then(m => m.LoginPage)
   },
   {
-    path: 'technician/reports',
-    canActivate: [authGuard, roleGuard('TECHNICIAN')],
-    loadComponent: () => import('./features/reports/pages/technician-reports.component').then(m => m.TechnicianReportsComponent)
+    path: '',
+    canActivate: [authGuard],
+    loadComponent: () => import('./layout/shell.component').then(m => m.ShellComponent),
+    children: [
+      {
+        path: 'reports',
+        title: 'Mis reportes · Nexo',
+        canActivate: [roleGuard('USER')],
+        loadComponent: () => import('./features/reports/pages/user-reports.page').then(m => m.UserReportsPage)
+      },
+      {
+        path: 'technician/reports',
+        title: 'Bandeja técnica · Nexo',
+        canActivate: [roleGuard('TECHNICIAN')],
+        loadComponent: () =>
+          import('./features/reports/pages/technician-reports.page').then(m => m.TechnicianReportsPage)
+      },
+      { path: '', pathMatch: 'full', redirectTo: homeRedirect }
+    ]
   },
-  { path: '', pathMatch: 'full', redirectTo: 'reports' },
-  { path: '**', redirectTo: 'reports' }
+  { path: '**', redirectTo: homeRedirect }
 ];

@@ -1,9 +1,11 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { FeedbackHostComponent } from './shared/ui/feedback-host.component';
 
 @Component({
-  imports: [RouterOutlet],
   selector: 'app-root',
-  template: '<router-outlet />'
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [RouterOutlet, FeedbackHostComponent],
+  template: '<router-outlet /><app-feedback-host />'
 })
 export class App {}

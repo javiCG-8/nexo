@@ -6,15 +6,16 @@ export interface Report {
   organizationId: string;
   title: string;
   description: string;
-  resolutionNotes?: string | null;
+  resolutionNotes: string | null;
   categoryId: string;
-  categoryCode?: string;
-  categoryName?: string;
+  categoryCode: string;
+  categoryName: string;
   priority: ReportPriority;
   status: ReportStatus;
   reporterId: string;
+  reporterName: string;
   technicianId: string | null;
-  technicianName?: string | null;
+  technicianName: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -23,7 +24,7 @@ export interface ReportListResponse {
   items: Report[];
 }
 
-export interface CreateReportRequest {
+export interface ReportPayload {
   title: string;
   description: string;
   categoryId: string;

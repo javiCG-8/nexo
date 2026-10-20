@@ -1,0 +1,25 @@
+name: Nueva funcionalidad
+description: Propuesta que dará origen a una especificación (SDD)
+labels: [enhancement]
+body:
+  - type: textarea
+    id: historia
+    attributes:
+      label: Historia de usuario
+      placeholder: Como técnico, quiero ... para ...
+    validations:
+      required: true
+  - type: textarea
+    id: aceptacion
+    attributes:
+      label: Criterios de aceptación
+      description: Formato Given / When / Then. Se copiarán a specs/NNN-nombre/spec.md.
+    validations:
+      required: true
+  - type: dropdown
+    id: prioridad
+    attributes:
+      label: Prioridad
+      options: [P1 - imprescindible, P2 - importante, P3 - deseable]
+    validations:
+      required: true

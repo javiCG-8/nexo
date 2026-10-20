@@ -7,7 +7,10 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "test": "jest --runInBand"
+    "typecheck": "tsc --noEmit",
+    "test": "jest --runInBand",
+    "test:coverage": "jest --runInBand --coverage",
+    "test:integration": "jest -c jest.integration.config.js --runInBand"
   },
   "keywords": [],
   "author": "",
