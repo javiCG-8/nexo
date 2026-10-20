@@ -1,0 +1,31 @@
+# Actualizaciones automáticas de dependencias mediante Pull Requests semanales.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /backend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: 'chore(deps-backend)'
+    groups:
+      desarrollo:
+        dependency-type: development
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: 'chore(deps-frontend)'
+    groups:
+      angular:
+        patterns: ['@angular/*', '@angular-devkit/*']
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: 'ci(deps)'
