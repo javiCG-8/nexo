@@ -39,6 +39,7 @@ CREATE TABLE reports (
   organization_id uuid NOT NULL REFERENCES organizations(id),
   title text NOT NULL CHECK (length(trim(title)) BETWEEN 1 AND 150),
   description text NOT NULL CHECK (length(trim(description)) BETWEEN 1 AND 5000),
+  resolution_notes text CHECK (resolution_notes IS NULL OR length(trim(resolution_notes)) BETWEEN 5 AND 2000),
   category_id uuid NOT NULL,
   priority text NOT NULL CHECK (priority IN ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL')),
   status text NOT NULL DEFAULT 'OPEN' CHECK (status IN ('OPEN', 'IN_PROGRESS', 'RESOLVED')),
