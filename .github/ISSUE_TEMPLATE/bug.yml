@@ -1,0 +1,35 @@
+name: Reporte de error
+description: Algo no funciona como dice la especificación
+labels: [bug]
+body:
+  - type: textarea
+    id: actual
+    attributes:
+      label: Qué ocurre
+      placeholder: Al resolver un reporte sin notas, la pantalla se queda cargando.
+    validations:
+      required: true
+  - type: textarea
+    id: esperado
+    attributes:
+      label: Qué debería ocurrir
+      description: Cita el requisito de la spec si aplica (p. ej. spec 002 FR-004).
+    validations:
+      required: true
+  - type: textarea
+    id: pasos
+    attributes:
+      label: Pasos para reproducir
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área
+      options: [Frontend, Backend / API, Base de datos, Pipeline CI/CD]
+    validations:
+      required: true
