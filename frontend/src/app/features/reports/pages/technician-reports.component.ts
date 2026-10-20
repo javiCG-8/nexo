@@ -153,6 +153,11 @@ import { StatusBadgeComponent } from '../components/status-badge.component';
           <dt>Descripción</dt>
           <dd>{{ report.description }}</dd>
 
+          @if (report.resolutionNotes) {
+            <dt>Solución / Notas</dt>
+            <dd style="color: var(--success); font-weight: 500;">{{ report.resolutionNotes }}</dd>
+          }
+
           <dt>Categoría</dt>
           <dd>{{ report.categoryName || report.categoryCode || report.categoryId }}</dd>
 
@@ -178,6 +183,37 @@ import { StatusBadgeComponent } from '../components/status-badge.component';
       </aside>
     }
 
+    @if (resolvingReport(); as report) {
+      <div class="detail-backdrop v-visible" (click)="resolvingReport.set(null)"></div>
+      <aside class="drawer open" aria-label="Resolver Reporte">
+        <div class="drawer-header">
+          <div>
+            <p class="eyebrow">Cierre de Incidente</p>
+            <h2>Describir Solución</h2>
+          </div>
+          <button class="icon-button" (click)="resolvingReport.set(null)">Cerrar</button>
+        </div>
+        <div style="padding: 20px;">
+          <p style="margin-bottom: 12px; color: var(--text-muted); font-size: 12px;">
+            Por favor, ingresa una breve descripción de la solución o acción realizada para resolver el reporte: <strong>{{ report.title }}</strong>.
+          </p>
+          <label for="resNotes">Notas de solución</label>
+          <textarea
+            id="resNotes"
+            rows="5"
+            placeholder="Ej: Se reemplazó el conector RJ-45 defectuoso y se verificó la conectividad con el servidor principal."
+            #notesInput
+          ></textarea>
+          <button
+            class="button button-primary button-wide"
+            (click)="confirmResolve(report, notesInput.value)"
+          >
+            Confirmar y Resolver Reporte
+          </button>
+        </div>
+      </aside>
+    }
+
     @if (toast()) {
       <div class="toast" role="status">{{ toast() }}</div>
     }
@@ -190,6 +226,7 @@ export class TechnicianReportsComponent {
   error = '';
   view = signal<'table' | 'board'>('table');
   detail = signal<Report | null>(null);
+  resolvingReport = signal<Report | null>(null);
   toast = signal('');
 
   search = signal('');
@@ -246,8 +283,27 @@ export class TechnicianReportsComponent {
   }
 
   advance(report: Report, status: ReportStatus): void {
-    this.service.updateStatus(report.id, status).subscribe({
-      next: () => this.updated('Estado actualizado.'),
+    if (status === 'RESOLVED') {
+      this.resolvingReport.set(report);
+    } else {
+      this.service.updateStatus(report.id, status).subscribe({
+        next: () => this.updated('Estado actualizado a En proceso.'),
+        error: e => this.setError(e)
+      });
+    }
+  }
+
+  confirmResolve(report: Report, notes: string): void {
+    const trimmedNotes = notes.trim();
+    if (trimmedNotes.length < 5) {
+      this.error = 'Describe la solución aplicada (mínimo 5 caracteres).';
+      return;
+    }
+    this.service.updateStatus(report.id, 'RESOLVED', trimmedNotes).subscribe({
+      next: () => {
+        this.resolvingReport.set(null);
+        this.updated('Reporte resuelto con notas guardadas.');
+      },
       error: e => this.setError(e)
     });
   }

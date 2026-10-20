@@ -32,7 +32,7 @@ import { StatusBadgeComponent } from '../components/status-badge.component';
           <p class="eyebrow">Panel de Usuario</p>
           <h1>Mis Reportes de Soporte</h1>
         </div>
-        <button class="button button-primary" (click)="drawer.set(true)">
+        <button class="button button-primary" (click)="openCreateModal()">
           Nuevo Reporte
         </button>
       </header>
@@ -102,8 +102,10 @@ import { StatusBadgeComponent } from '../components/status-badge.component';
       [categories]="categories"
       [open]="drawer()"
       [submitting]="sending()"
-      (close)="drawer.set(false)"
+      [editReport]="editingReport()"
+      (close)="drawer.set(false); editingReport.set(null)"
       (created)="create($event)"
+      (updated)="update($event.id, $event.data)"
     />
 
     @if (detail(); as report) {
@@ -120,6 +122,11 @@ import { StatusBadgeComponent } from '../components/status-badge.component';
         <dl class="detail-list">
           <dt>Descripción</dt>
           <dd>{{ report.description }}</dd>
+
+          @if (report.resolutionNotes) {
+            <dt>Solución del Técnico</dt>
+            <dd style="color: var(--success); font-weight: 500;">{{ report.resolutionNotes }}</dd>
+          }
 
           <dt>Categoría</dt>
           <dd>{{ report.categoryName || report.categoryCode || report.categoryId }}</dd>
@@ -142,6 +149,23 @@ import { StatusBadgeComponent } from '../components/status-badge.component';
 
           <dt>Actualizado</dt>
           <dd>{{ report.updatedAt | date:'dd/MM/yyyy HH:mm' }}</dd>
+
+          @if (isEditable(report)) {
+            <dt>Acciones CRUD (5 min)</dt>
+            <dd>
+              <div style="display: flex; gap: 8px; margin-top: 4px;">
+                <button class="button button-small button-secondary" (click)="openEditModal(report)">
+                  Editar
+                </button>
+                <button class="button button-small" style="color: var(--danger); border-color: var(--danger-border);" (click)="cancelReport(report)">
+                  Cancelar Reporte
+                </button>
+              </div>
+              <small style="display: block; color: var(--text-muted); margin-top: 4px;">
+                Edición/Cancelación disponible durante los primeros 5 minutos.
+              </small>
+            </dd>
+          }
         </dl>
       </aside>
     }
@@ -159,6 +183,7 @@ export class UserReportsComponent {
   sending = signal(false);
   drawer = signal(false);
   detail = signal<Report | null>(null);
+  editingReport = signal<Report | null>(null);
   toast = signal('');
   error = '';
 
@@ -201,6 +226,23 @@ export class UserReportsComponent {
     this.statusFilter.set(this.statusFilter() === status ? '' : status);
   }
 
+  openCreateModal(): void {
+    this.editingReport.set(null);
+    this.drawer.set(true);
+  }
+
+  openEditModal(report: Report): void {
+    this.editingReport.set(report);
+    this.detail.set(null);
+    this.drawer.set(true);
+  }
+
+  isEditable(report: Report): boolean {
+    if (report.status !== 'OPEN') return false;
+    const elapsedMinutes = (Date.now() - new Date(report.createdAt).getTime()) / (1000 * 60);
+    return elapsedMinutes <= 5;
+  }
+
   create(payload: CreateReportRequest): void {
     this.sending.set(true);
     this.service.create(payload).subscribe({
@@ -215,6 +257,37 @@ export class UserReportsComponent {
         this.sending.set(false);
         this.setError(e);
       }
+    });
+  }
+
+  update(id: string, payload: Partial<CreateReportRequest>): void {
+    this.sending.set(true);
+    this.service.update(id, payload).subscribe({
+      next: () => {
+        this.sending.set(false);
+        this.drawer.set(false);
+        this.editingReport.set(null);
+        this.toast.set('Reporte actualizado correctamente.');
+        this.load();
+        setTimeout(() => this.toast.set(''), 3000);
+      },
+      error: e => {
+        this.sending.set(false);
+        this.setError(e);
+      }
+    });
+  }
+
+  cancelReport(report: Report): void {
+    if (!confirm('¿Estás seguro de cancelar este reporte?')) return;
+    this.service.cancel(report.id).subscribe({
+      next: () => {
+        this.detail.set(null);
+        this.toast.set('Reporte cancelado.');
+        this.load();
+        setTimeout(() => this.toast.set(''), 3000);
+      },
+      error: e => this.setError(e)
     });
   }
 
