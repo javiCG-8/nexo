@@ -21,11 +21,19 @@ export class ReportService {
     return this.http.post<Report>(`${this.baseUrl}/reports`, payload);
   }
 
+  update(reportId: string, payload: Partial<CreateReportRequest>) {
+    return this.http.put<Report>(`${this.baseUrl}/reports/${reportId}`, payload);
+  }
+
+  cancel(reportId: string) {
+    return this.http.delete<{ message: string }>(`${this.baseUrl}/reports/${reportId}`);
+  }
+
   assign(reportId: string) {
     return this.http.patch<Report>(`${this.baseUrl}/reports/${reportId}/assignment`, { assignToMe: true });
   }
 
-  updateStatus(reportId: string, status: ReportStatus) {
-    return this.http.patch<Report>(`${this.baseUrl}/reports/${reportId}/status`, { status });
+  updateStatus(reportId: string, status: ReportStatus, resolutionNotes?: string) {
+    return this.http.patch<Report>(`${this.baseUrl}/reports/${reportId}/status`, { status, resolutionNotes });
   }
 }

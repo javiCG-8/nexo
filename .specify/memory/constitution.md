@@ -1,50 +1,47 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# Constitución de Nexo
 
-## Core Principles
+Principios que gobiernan el desarrollo de Nexo, la mesa de ayuda TI multi-organización. Toda especificación, plan, tarea y Pull Request se evalúa contra este documento.
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+## Principios fundamentales
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### I. La especificación precede al código (Spec Driven Development)
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+Ninguna funcionalidad se implementa sin una especificación en `specs/NNN-nombre/` que contenga al menos `spec.md`, `plan.md` y `tasks.md`. La especificación describe el **qué** y el **porqué** en lenguaje de negocio; el plan describe el **cómo**. Si el código y la especificación divergen, se corrige primero la especificación y luego el código.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### II. Aislamiento por organización (multi-tenant) no negociable
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+Cada consulta que lee o escribe datos de negocio filtra por `organization_id` obtenido del token autenticado, nunca de datos enviados por el cliente. Las claves foráneas compuestas `(id, organization_id)` garantizan el aislamiento también en la base de datos. El acceso a recursos de otra organización responde `404` para no revelar su existencia.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+### III. Seguridad por defecto en todas las capas
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+- Validación estricta de entrada con esquemas en el borde de la API; los datos inválidos se rechazan, no se "limpian".
+- Consultas SQL siempre parametrizadas.
+- Contraseñas con bcrypt; tokens JWT firmados con algoritmo fijado, emisor, audiencia y expiración.
+- El token de sesión viaja en una cookie `HttpOnly`, `SameSite=Strict`; nunca es accesible desde JavaScript.
+- Cabeceras HTTP seguras (Helmet), CORS restringido a un único origen y límite de tasa en autenticación.
+- Ningún secreto, `.env` o credencial real se versiona.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+### IV. Pruebas primero (TDD) e integradas al pipeline
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+Cada regla de negocio tiene una prueba automatizada que falla antes de implementarla. Las pruebas de contrato de la API (Jest + Supertest) y de componentes (Vitest) se ejecutan en GitHub Actions en cada Pull Request; un pipeline en rojo bloquea la integración.
 
-## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
+### V. Simplicidad y arquitectura por capas
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+Backend organizado por módulos de dominio (`auth`, `reports`, `categories`) con capas `routes → service → repository`. Las rutas solo validan y delegan; los servicios contienen las reglas de negocio; los repositorios solo SQL. Frontend Angular con componentes standalone, señales y separación `core / features / shared`. Se rechaza la complejidad que no responda a un requisito.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+### VI. Accesibilidad y diseño móvil primero
+
+La interfaz cumple WCAG 2.1 AA: contraste suficiente, foco visible, navegación por teclado, etiquetas en formularios y objetivos táctiles ≥ 44 px. Se diseña primero para pantallas móviles y se amplía a escritorio.
+
+## Flujo de trabajo
+
+- **Ramas**: GitHub Flow. `main` siempre desplegable; cada cambio vive en una rama `feat/`, `fix/`, `docs/`, `ci/` o `chore/`.
+- **Commits**: Conventional Commits en español (`feat:`, `fix:`, `docs:`, `ci:`, `refactor:`, `test:`, `chore:`), atómicos y descriptivos.
+- **Pull Requests**: todo cambio llega a `main` mediante PR con descripción, enlace a la especificación y pipeline en verde. Se requiere revisión antes de fusionar.
+- **Versionado de la base de datos**: el esquema se modifica mediante scripts en `backend/db/migrations/` y se refleja en `schema.sql`; nunca con DDL ejecutado desde el código de la aplicación.
+
+## Gobernanza
+
+Esta constitución prevalece sobre cualquier otra práctica. Las enmiendas se proponen mediante Pull Request que actualice este archivo, explique el motivo e incremente la versión.
+
+**Versión**: 1.0.0 | **Ratificada**: 2026-10-09 | **Última enmienda**: 2026-10-20

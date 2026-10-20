@@ -6,6 +6,7 @@ export interface Report {
   organizationId: string;
   title: string;
   description: string;
+  resolutionNotes?: string | null;
   categoryId: string;
   categoryCode?: string;
   categoryName?: string;

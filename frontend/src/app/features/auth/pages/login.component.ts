@@ -13,7 +13,7 @@ import { AuthService } from '../services/auth.service';
       <section class="auth-card">
         <div class="page-heading">
           <p class="eyebrow">Mesa de Ayuda TI</p>
-          <h1>Nexo</h1>
+          <h1><span class="brand-tech-logo">Nexo <span class="tech-dot"></span></span></h1>
           <p>Ingrese sus credenciales de acceso</p>
         </div>
 

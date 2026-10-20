@@ -9,7 +9,7 @@ import { AuthStateService } from '../../core/services/auth-state.service';
   template: `
     <aside class="sidebar">
       <a class="sidebar-brand" [routerLink]="auth.user()?.role === 'TECHNICIAN' ? '/technician/reports' : '/reports'">
-        Nexo
+        <span class="brand-tech-logo">Nexo <span class="tech-dot"></span></span>
         <span class="sidebar-brand-badge">HelpDesk</span>
       </a>
 
